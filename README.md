@@ -10,4 +10,3 @@ Aplikasi sederhana untuk pembelian tiket menggunakan Pi Network, dibangun dengan
 - Backend dengan FastAPI untuk verifikasi signature & pembayaran
 
 ## Struktur Proyek
-
