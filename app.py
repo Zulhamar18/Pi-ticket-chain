@@ -1,87 +1,102 @@
-# Sandbox URL https://sandbox.minepi.com/mobile-app-ui/app/the-insult-o-matic
-
-from flask import Flask, render_template
-from flask import request
+from flask import Flask, render_template, request
 from flask_bootstrap import Bootstrap
+from dotenv import load_dotenv
+import os
 import simplejson as json
 import requests
 import random
-import variables
 
-apikey = variables.apikey
+# Load .env variables
+load_dotenv()
+API_KEY = os.getenv(drf9t678txi3dsatyhvb7o9fcqmvwj5wlkgy4mebxy3ytjxkue64jx0vf2elqgrm)
 
-header = {
-    'Authorization' : "Key {}".format(apikey)
-}
-
-
+# Setup Flask app
 app = Flask(__name__)
 Bootstrap(app)
 
+# Pi Network API Headers
+header = {
+    'Authorization': f"Key {drf9t678txi3dsatyhvb7o9fcqmvwj5wlkgy4mebxy3ytjxkue64jx0vf2elqgrm}"
+}
+
+# Home Page
 @app.route('/')
 def index():
     return render_template('index.html')
 
+# Random Quote Generator
 @app.route('/get_quote')
 def get_quote():
-    with open('quotes.txt', 'r') as f:
-        quotes = f.readlines()
-    return random.choice(quotes)
+    try:
+        with open('quotes.txt', 'r') as f:
+            quotes = f.readlines()
+        return random.choice(quotes)
+    except Exception as e:
+        return f"Error reading quotes.txt: {str(e)}"
 
+# Back Page
 @app.route('/back')
 def back():
     return render_template('back.html')
 
+# Payment Approval
 @app.route('/payment/approve', methods=['POST'])
 def approve():
-    # Build the header for user authentication
-    accessToken = request.form.get('accessToken')
-    userheader = {
-        'Authorization' : f"Bearer {accessToken}"
+    access_token = request.form.get('accessToken')
+    payment_id = request.form.get('paymentId')
+    user_header = {
+        'Authorization': f"Bearer {access_token}"
     }
-    paymentId = request.form.get('paymentId')
-    approveurl = f"https://api.minepi.com/v2/payments/{paymentId}/approve"
-    response = requests.post(approveurl, headers = header)
-    userurl = "https://api.minepi.com/v2/me"
-    userresponse = requests.get(userurl, headers = userheader)
-    userjson = json.loads(userresponse.text)
-    return(response.text)
+    
+    approve_url = f"https://api.minepi.com/v2/payments/{payment_id}/approve"
+    response = requests.post(approve_url, headers=header)
 
+    # Get user info
+    user_url = "https://api.minepi.com/v2/me"
+    user_response = requests.get(user_url, headers=user_header)
+    user_json = json.loads(user_response.text)
+
+    return response.text
+
+# Payment Completion
 @app.route('/payment/complete', methods=['POST'])
-def complete():   
-    # Build the header for user authentication
-    accessToken = request.form.get('accessToken')
-    userheader = {
-        'Authorization' : f"Bearer {accessToken}"
-    }
-    paymentId = request.form.get('paymentId')
+def complete():
+    access_token = request.form.get('accessToken')
+    payment_id = request.form.get('paymentId')
     txid = request.form.get('txid')
-    userurl = "https://api.minepi.com/v2/me"
-    userresponse = requests.get(userurl, headers = userheader)
+
+    user_header = {
+        'Authorization': f"Bearer {access_token}"
+    }
+    complete_url = f"https://api.minepi.com/v2/payments/{payment_id}/complete"
     data = {'txid': txid}
-    approveurl = f"https://api.minepi.com/v2/payments/{paymentId}/complete"
-    response = requests.post(approveurl, headers = header, data = data)
-    return(response.text)
+    response = requests.post(complete_url, headers=header, data=data)
 
+    return response.text
+
+# Payment Cancellation
 @app.route('/payment/cancel', methods=['POST'])
-def cancel():    
-    paymentId = request.form.get('paymentId')
-    approveurl = f"https://api.minepi.com/v2/payments/{paymentId}/cancel"
-    response = requests.post(approveurl, headers = header)
-    return(response.text)
+def cancel():
+    payment_id = request.form.get('paymentId')
+    cancel_url = f"https://api.minepi.com/v2/payments/{payment_id}/cancel"
+    response = requests.post(cancel_url, headers=header)
+    return response.text
 
+# Payment Error (also cancels)
 @app.route('/payment/error', methods=['POST'])
-def error():    
-    paymentId = request.form.get('paymentId')
-    approveurl = f"https://api.minepi.com/v2/payments/{paymentId}/cancel"
-    response = requests.post(approveurl, headers = header)
-    return(response.text)
+def error():
+    payment_id = request.form.get('paymentId')
+    error_url = f"https://api.minepi.com/v2/payments/{payment_id}/cancel"
+    response = requests.post(error_url, headers=header)
+    return response.text
 
+# Get User Info from Pi Network
 @app.route('/me', methods=['POST'])
 def getme():
-    userurl = "https://api.minepi.com/v2/me"
-    response = requests.post(userurl, headers = header)
-    return(response.text)
+    user_url = "https://api.minepi.com/v2/me"
+    response = requests.post(user_url, headers=header)
+    return response.text
 
+# Run server
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
